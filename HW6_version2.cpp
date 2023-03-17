@@ -14,7 +14,7 @@ auto start =high_resolution_clock::now();
 const double lx=1; const double ly=1;  //dimensions of Domain
 const int nx=81; const int ny=nx;     //Number of nodes along X and Y
 const int n=nx*ny;                   //Total number of Nodes
-const int w=1;
+const int w=1.93;
 
 //DERIVED INPUTS
 const double dx=lx/(nx-1); const double dy=ly/(ny-1);

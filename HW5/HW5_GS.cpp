@@ -12,7 +12,7 @@ void init();
 void GS();
 //INPUTS
   const double lx=1;const double ly=1;                      //dimensions of the 2D Domain
-  const int nx=21; const int ny=nx;           //No of nodes in x and y direction
+  const int nx=81; const int ny=nx;           //No of nodes in x and y direction
   const int n=nx*ny;                         //No of nodes
   double w;                          //RELAXATION FACTOR
 
@@ -26,7 +26,7 @@ double S[nx][ny]={};
 double res[nx][ny]={};
 
 int main(){
-    w=1;
+    w=1.93;
     init();
 }
 
@@ -79,7 +79,7 @@ void GS(){
         double res_max=1; double res_avg=1;
         int iter=0;
 
-        ofstream fout("HW5_GS_residuals_21.txt");
+        ofstream fout("HW5_GS_residuals_81.txt");
         fout<<"ITERATION:"<<"\t"<<"log(MAX RESIDUAL) :"<<"\t\t"<<"AVG RESIDUAL"<<"\t\t"<<"AVG ERROR"<<'\n'; 
     while((res_avg)>tol){
                 res_max=0; res_avg=0;                    //INITIALISING MAX RESIDUAL FOR THE RESPECTIVE ITERATION
@@ -114,8 +114,8 @@ void GS(){
 void printmatrix(int iter){
 
             cout<<"No.Iterations taken to converge :"<<iter<<'\n';
-            cout<<"The NODAL VLAUES are printed to : HW5_GS_sol_21.txt"<<'\n';
-            ofstream fout("HW5_GS_sol_21.txt");
+            cout<<"The NODAL VLAUES are printed to : HW5_GS_sol_81.txt"<<'\n';
+            ofstream fout("HW5_GS_sol_81.txt");
             fout<<"X coord:"<<"\t\t"<<"Y coord:"<<"\t\t"<<"Temperature:"<<'\n';
             fout<<"-----------------------------------------------------------"<<'\n';
             for(int i=0;i<ny;++i){
