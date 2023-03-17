@@ -14,7 +14,7 @@ auto start =high_resolution_clock::now();
 const double lx=1; const double ly=1;  //dimensions of Domain
 const int nx=81; const int ny=nx;     //Number of nodes along X and Y
 const int n=nx*ny;                   //Total number of Nodes
-const int w=1;
+int w=1;
 
 //DERIVED INPUTS
 const double dx=lx/(nx-1); const double dy=ly/(ny-1);
@@ -27,17 +27,16 @@ double S[ny][nx]={};
 
 //FUNCITONS DECLARATIONS..............................................................................................................................................................
 matrix Smooth();
-matrix Coarse_Smooth( matrix , int);
-matrix Restrict(matrix);
-matrix Prolongate(matrix);
+//matrix Coarse_Smooth( matrix );
+//matrix Restrict(matrix);
+//matrix Prolongate(matrix);
 void Multigrid();
-void Correct(matrix);
+//void Correct(matrix);
 void printmatrix();
 
 //GLOBAL VARIABLES
 double res_avg=1;
 double total_iter=0;
-double wus =0;
 double total_iter_fine=0;
 double total_iter_coarse=0;
 
@@ -84,17 +83,12 @@ Multigrid();
             cout<<'\n'<<"The time taken for convergence is : "<<duration.count() <<"\n";
             cout<<"TOTAL FINE ITERATIONS :"<<total_iter_fine<<endl;
             cout<<"TOAL COARSE ITERATIONS :"<<total_iter_coarse<<endl;
-            cout<<"TOAL WORK UNITS TAKEN :"<<wus<<endl;
 
 }
 
 //**************************************************** END OF INT MAIN()*******************************************************************************************************//
 
 void Multigrid(){
-ofstream fout("HW6_residuals.txt");
-fout<<"Residual:"<<"\t\t"<<"TOTAL FINE ITERATIONS"<<"\t\t"<<"TOTAL COARSE ITERATIONS"<<'\n';
-fout<<"-----------------------------------------------------------"<<'\n';
-
     matrix res_h( ny, vector<double>( nx , 0.0) );
     matrix res_H ( (ny+1)/2 , vector<double>( (nx+1)/2 , 0.0 ) ) ;
     matrix E_h( ny, vector<double>( nx , 0.0) );
@@ -104,15 +98,13 @@ cout<<"Before Smooth\n";
         res_h = Smooth();
         cout<<"Start of Multigrid"<<endl;
 
-while( log10(res_avg) > tol ){ //           total_iter<4
-        res_H =  Restrict(res_h);
-        E_H   =  Coarse_Smooth(res_H , 2); 
-        E_h   =  Prolongate(E_H);
-        Correct(E_h);
+while( log10(res_avg) > tol ){ //        log10(res_avg) > tol
+       // res_H =  Restrict(res_h);        
+        //E_H   =  Coarse_Smooth(res_H); 
+       //E_h   =  Prolongate(E_H);
+       // Correct(E_h);
         res_h =  Smooth();
-fout<<res_avg<<"\t"<<total_iter_fine<<"\t"<<total_iter_coarse<<'\n';
 }
-fout.close();
 cout<<res_avg<<endl;
 printmatrix();
 cout<<"End of Multigrid"<<endl;
@@ -128,7 +120,8 @@ matrix Smooth(){
         matrix res(ny , vector<double>( nx , 0.0 ));
         double res_new=1; double res_old=1;
         int iter=0; double tol=-8;
-    while( res_new/res_old < 0.5 || iter < 2  ){  //       log10(res_new) > tol
+
+    while( log10(res_new) > tol ){  //        res_new/res_old < 0.5 || iter <2 
         res_old = res_new; res_new=0;
                 for(int i=1;i<ny-1;++i){
                     for(int j=1;j<nx-1;++j){
@@ -138,7 +131,7 @@ matrix Smooth(){
     //RESIDUAL  CALCULATION
                 for(int i=1;i<ny-1;++i){
                     for(int j=1;j<nx-1;++j){    
-                    res[i][j] = -( (T[i][j+1]+T[i][j-1]+T[i+1][j]+T[i-1][j]-4*T[i][j])/(dx*dy)    -S[i][j]); //removed the negative sign
+                    res[i][j] = -(T[i][j+1]+T[i][j-1]+T[i+1][j]+T[i-1][j]-4*T[i][j]-dx*dy*S[i][j]); //removed the negative sign
                     res_new += pow( res[i][j] , 2 )/((nx-2)*(ny-2));
                     }
                 }
@@ -146,9 +139,9 @@ matrix Smooth(){
             ++iter;
             ++total_iter;
             ++total_iter_fine;
-            ++wus;
             //cout<<total_iter<<endl;
     }
+    
     res_avg=res_new;
     //cout<<res_avg<<endl;
     return res;
@@ -157,114 +150,21 @@ matrix Smooth(){
 
 
 //COARSE LEVEL SMOOTHENING -------------------------------------------------------------------------------------------------------------------------------------------------------------------//
-matrix Coarse_Smooth( matrix res_H , int level ){
- 
-    int Rows_H = res_H.size();
-    int Cols_H = res_H[0].size();
-    double dx_H = dx*2 ; double dy_H = dy*2;
-matrix E_H( Rows_H , vector<double>(Cols_H ,0.0));
-matrix res_coarse( Rows_H , vector<double>(Cols_H , 0.0));   
-        double res_coarse_new=1; 
-        double res_coarse_old=1;
-        int iter_coarse=0;
-    while( res_coarse_new/res_coarse_old <0.5 || iter_coarse<1 ){  
-                res_coarse_old = res_coarse_new ;                    //INITIALISING MAX RESIDUAL FOR THE RESPECTIVE ITERATION
-                res_coarse_new = 0; double dummy;
-                for( int i=1 ; i<Rows_H-1 ; ++i ){
-                    for( int j=1 ; j< Cols_H-1 ; ++j ){
-                        E_H[i][j] =0.25*( 4*(1-w)*E_H[i][j] + w*( E_H[i][j+1] + E_H[i][j-1] + E_H[i+1][j] + E_H[i-1][j] - dx_H*dy_H*(res_H[i][j]) ));
-                    }
-                }               
-
-                for(int i=1 ; i<Rows_H-1 ; ++i){
-                    for( int j=1 ; j<Cols_H-1 ; ++j){
-                        res_coarse[i][j] = ( (E_H[i][j+1]+E_H[i][j-1]+E_H[i+1][j]+E_H[i-1][j]-4*E_H[i][j] )/(dx_H*dy_H)  -res_H[i][j])   ;                         
-                        res_coarse_new += pow( res_coarse[i][j] , 2 )/( (Rows_H-2)*(Cols_H -2) );
-                    }
-                }
-                res_coarse_new = pow(res_coarse_new , 0.5);
-                //cout<<res_coarse_new<<endl;
-                ++iter_coarse;
-                ++total_iter;
-                ++total_iter_coarse;
-                wus += pow(0.5,level);
-                //cout<<total_iter<<endl;
-    }
-
-return E_H;
-
-}
-
 
 
 //---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------//
 //RESTRICTION FUNCTION
 
-matrix Restrict(matrix res_h){
-    int Rows_h = res_h.size();     
-    int Cols_h = res_h[0].size(); 
 
-    int Rows_H = (Rows_h+1)/2;
-    int Cols_H = (Cols_h+1)/2; 
-    
-double res_max=0; //DELETE THIS MAN
-    matrix res_H( Rows_H , vector<double>( Cols_H , 0.0 ) );
-    
-        for(int i=1;i<Rows_H-1;++i){
-            for(int j=1;j<Cols_H-1;++j){
-                res_H[i][j]= (4*res_h[2*i][2*j]  + res_h[2*i-1][2*j] + res_h[2*i+1][2*j] + res_h[2*i][2*j +1] + res_h[2*i][2*j -1] )/8;// (4*P + S + N + E + W)*(1/8)    
-            }
-        }  
-
-return res_H;
-
-}
 
 
 //--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------//
 //PROLONGATION FUNCTION
 
-matrix Prolongate(matrix E_H){
-    int Rows_H = E_H.size();
-    int Cols_H = E_H[0].size();
 
-    int Rows_h=Rows_H*2-1; int Cols_h = Cols_H*2 -1 ;
-matrix E_h( Rows_h, vector<double>( Cols_h , 0.0)) ; 
-double E_h_max=0;
-  for(int i=0 ; i<Rows_h ; ++i){
-    for( int j=0 ; j<Cols_h ; ++j){
-        if( i%2==0 && j%2==0 ){
-            E_h[i][j] = E_H[i/2][j/2];
-        }
-        else if( i%2==0 && j%2!=0){
-            E_h[i][j] = ( E_H[i/2][(j+1)/2] + E_H[i/2][(j-1)/2] )/2 ; 
-        }
-        else if( i%2!=0 && j%2==0){
-            E_h[i][j] = ( E_H[(i-1)/2][j/2] + E_H[(i+1)/2][j/2] )/2 ;
-        }
-        else{
-            E_h[i][j] = ( E_H[(i-1)/2][(j-1)/2] + E_H[(i-1)/2][(j+1)/2] + E_H[(i+1)/2][(j-1)/2] + E_H[(i+1)/2][(j+1)/2] )/4;
-        }
-        if( abs(E_h[i][j]) > abs(E_h_max) ){ E_h_max=E_h[i][j]; }
-    }
-  }     
-//cout<<"MAX CORRECTION : "<<E_h_max<<endl;
-
-return E_h;
-
-}
 
 //CORRECTION FUNCTION------------------------------------------------------------------------------------------------------------------------------------------------------------//
-void Correct(  matrix E_h){
-    double E_h_max=0;
-    for(int i=1;i<ny-1;++i){
-        for(int j=1;j<nx-1;++j){
-            T[i][j] += E_h[i][j];
-            if(abs(E_h[i][j])>E_h_max){ E_h_max=E_h[i][j];}
-        }
-    }
-    
- }
+
 
 //PRINTING OUT SOLUTION-----------------------------------------------------------------------------------------------------------------------------------------------------------//
 void printmatrix(){

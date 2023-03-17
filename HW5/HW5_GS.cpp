@@ -12,7 +12,7 @@ void init();
 void GS();
 //INPUTS
   const double lx=1;const double ly=1;                      //dimensions of the 2D Domain
-  const int nx=81; const int ny=nx;           //No of nodes in x and y direction
+  const int nx=21; const int ny=nx;           //No of nodes in x and y direction
   const int n=nx*ny;                         //No of nodes
   double w;                          //RELAXATION FACTOR
 
@@ -79,7 +79,7 @@ void GS(){
         double res_max=1; double res_avg=1;
         int iter=0;
 
-        ofstream fout("HW5_GS_residuals_81.txt");
+        ofstream fout("HW5_GS_residuals_21.txt");
         fout<<"ITERATION:"<<"\t"<<"log(MAX RESIDUAL) :"<<"\t\t"<<"AVG RESIDUAL"<<"\t\t"<<"AVG ERROR"<<'\n'; 
     while((res_avg)>tol){
                 res_max=0; res_avg=0;                    //INITIALISING MAX RESIDUAL FOR THE RESPECTIVE ITERATION
@@ -94,7 +94,7 @@ void GS(){
     //RESIDUAL AND ERROR CALCULATION    
                 for(int i=1;i<ny-1;++i){
                     for(int j=1;j<nx-1;++j){
-                    res[i][j]= abs(T[i][j+1]+T[i][j-1]+T[i+1][j]+T[i-1][j]-4*T[i][j]-dx*dy*S[i][j]);
+                    res[i][j]= abs( ( T[i][j+1]+T[i][j-1]+T[i+1][j]+T[i-1][j]-4*T[i][j] )/(dx*dy)  -S[i][j]);
                     res_avg+=pow(res[i][j],2)/((nx-2)*(ny-2));
                     if(res[i][j]>res_max){ res_max=res[i][j];}
                     }
@@ -114,8 +114,8 @@ void GS(){
 void printmatrix(int iter){
 
             cout<<"No.Iterations taken to converge :"<<iter<<'\n';
-            cout<<"The NODAL VLAUES are printed to : HW5_GS_sol_81.txt"<<'\n';
-            ofstream fout("HW5_GS_sol_81.txt");
+            cout<<"The NODAL VLAUES are printed to : HW5_GS_sol_21.txt"<<'\n';
+            ofstream fout("HW5_GS_sol_21.txt");
             fout<<"X coord:"<<"\t\t"<<"Y coord:"<<"\t\t"<<"Temperature:"<<'\n';
             fout<<"-----------------------------------------------------------"<<'\n';
             for(int i=0;i<ny;++i){

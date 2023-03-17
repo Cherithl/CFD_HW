@@ -27,7 +27,7 @@ double S[ny][nx]={};
 double res[ny][nx]={};
 
 int main(){
-    w=1.332;
+    w=1.32;
     init();
 }
 
@@ -85,10 +85,10 @@ void ADI(){
         int iter=0;
         ofstream fout("HW5_ADI_residuals_81.txt");
         fout<<"ITERATION:"<<"\t"<<"log(MAX RESIDUAL) :"<<"\t\t"<<"AVG RESIDUAL"<<"\t\t"<<"AVG ERROR"<<'\n';
-    
-    while(log10(res_max)>log10(tol)){
+    double res_avg=1;
+    while(log10(res_avg)>log10(tol)){
                 res_max=0;                     //INITIALISING MAX RESIDUAL FOR THE RESPECTIVE ITERATION
-                double err_avg=0;double res_avg=0;// INITIALISING AVERAGE ERROR AND AVERAGE RESIDUAL 
+                double err_avg=0; res_avg=0;// INITIALISING AVERAGE ERROR AND AVERAGE RESIDUAL 
     //CALLING TDMAX AND TDMAY
                double dummy[ny][nx];
                for(int i=1;i<ny-1;++i){
@@ -105,8 +105,8 @@ void ADI(){
     //RESIDUAL AND ERROR CALCULATION    
                 for(int i=1;i<ny-1;++i){
                     for(int j=1;j<nx-1;++j){
-                    res[i][j]= abs( T[i][j+1] + T[i][j-1] + T[i+1][j] + T[i-1][j] - 4*T[i][j]- dx*dy*S[i][j] );
-                    res_avg+=pow( res[i][j] , 2 )/n;
+                    res[i][j]= abs( (T[i][j+1] + T[i][j-1] + T[i+1][j] + T[i-1][j] - 4*T[i][j])/(dx*dy)- S[i][j] );
+                    res_avg+=pow( res[i][j] , 2 )/((nx-2)*(ny-2));
                     err_avg+=pow( dummy[i][j]-T[i][j] , 2 )/n;
                     if(res[i][j]>res_max){ res_max = res[i][j]; }
                     }
