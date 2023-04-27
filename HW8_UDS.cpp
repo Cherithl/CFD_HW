@@ -25,11 +25,11 @@ void GS(){
 while( log10(res_avg) > tol ){
     res_avg=0;
     for( int i=1 ; i < n-1 ; ++i){
-        T[i] =   1.0/(2+Pe)*( (1+Pe)*T[i-1] + T[i+1]  );
+        T[i] =   -1.0/(2+Pe)*( (1+Pe)*T[i-1] + T[i+1]  );
     } 
 //RESIDUAL
     for( int i=1 ; i<n-1 ; ++i){
-        res[i]= -(1+Pe)*T[i-1]  + (2+Pe)*T[i] - T[i+1]  ;
+        res[i]= -(1+Pe)*T[i-1]  - (2+Pe)*T[i] - T[i+1]  ;
         res_avg += pow(res[i],2)/(n-2); 
     }
     res_avg += pow(res_avg,0.5); 
@@ -54,11 +54,11 @@ double D[n-2] = {};
 double E[n-2] = {};
 double sol[n-2] = {};
 
-E[0] = -1; D[0] = 2+Pe;    W[n-3] = -1-Pe; D[n-3] = -2;
+E[0] = -1; D[0] = -(2+Pe);    W[n-3] = -1-Pe; D[n-3] = -2;
 Q[n-3] =  pow( 2+Pe ,-1 ) ; 
 
 for(int i=1 ; i<n-2 ; ++i){
-  W[i]= -1-Pe  ; D[i]=2+Pe ; E[i] = -1;
+  W[i]= -1-Pe  ; D[i]=-(2+Pe) ; E[i] = -1;
 }
 //FORWARD SUBSTITUTION to reduce to UPPER TRIANGULAR MATRIX
     for(int i=1;i<n-2;++i){
