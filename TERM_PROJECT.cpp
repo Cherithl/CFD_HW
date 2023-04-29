@@ -22,7 +22,7 @@ void printmatrix( matrix );
 
 //DOMAIN PARAMETERS
 const double lx=1 , ly =1;
-int nx = 10 , ny =nx;
+int nx = 32 , ny =nx;
 int n = (nx+2)*(ny+2);
 const double dx = lx/nx , dy = ly/ny;
 
@@ -60,22 +60,23 @@ int main(){
 /*ENFORCING BOUNDARY CONDITIONS*/  
     std::tie( u_nm1 , v_nm1 )   =  Update_Boundaries( u_nm1 , v_nm1 );
     std::tie( u_n , v_n )       =  Update_Boundaries( u_n , v_n );
+    //printmatrix(u_nm1); cout<<endl; printmatrix(u_n);
 
 //FRACTIONAL STEP ALGORITHM STARTS HERE ---------------------------------------------------------------------------------------------------------------
     
-    double vel_tol = -8;
-while( (log10(err_u) > vel_tol || log10(err_v) > vel_tol ) || TIME_ITER<100){
+    double vel_tol = 1E-8;
+while( (err_u > vel_tol || err_v > vel_tol) || TIME_ITER< 100){
         err_u=0; err_v=0;
     FV_Momentum();
-    Pressure_Poisson();
-    Velocity_Correction();
+    //Pressure_Poisson();
+    //Velocity_Correction();
     Velocity_L2Norm();
  
 TIME_ITER++;
 cout<<"TIME ITER :  "<<TIME_ITER<<endl;
 cout<<" ERR U : "<<err_u<<endl;  cout<<" ERR V : "<<err_v<<endl;
 }
-printmatrix(P_corr);cout<<endl<<endl;
+//printmatrix(P_corr);cout<<endl<<endl;
 printmatrix(u_n);cout<<endl<<endl;
 cout<<" ERR U : "<<err_u<<endl;  cout<<" ERR V : "<<err_v<<endl;
 }
@@ -91,7 +92,7 @@ std::tuple<matrix,matrix> Update_Boundaries( matrix u , matrix v ){
     }
     for(int j=1 ; j<nx+1 ; ++j){
         u[ny+1][j] = 2*1.0 - u[ny][j] ;  v[ny+1][j] = 0; //TOP WALL
-        u[0][j]    = 2*0 - u[1][j];      v[0][j]    = 0; //BOTTOM WALL
+        u[0][j]    = 2*0.0 - u[1][j];      v[0][j]    = 0; //BOTTOM WALL
     }   
     return std::make_tuple( u , v  ) ; 
 }
