@@ -17,6 +17,7 @@ void Velocity_Correction();
 void Velocity_L2Norm();
 void Output_Solution();
 
+
 /* FUNCTION FOR OPERATIONS */
 std::tuple<matrix,matrix> Update_Boundaries( matrix , matrix );
 void printmatrix(matrix);
@@ -41,8 +42,8 @@ matrix    u_nm1( ny+2 , vector<double>( nx+2 , 0.0) );
 matrix    v_nm1( ny+2 , vector<double>( nx+2 , 0.0) );
 matrix      u_n( ny+2 , vector<double>( nx+2 , 0.0 ));
 matrix      v_n( ny+2 , vector<double>( nx+2 , 0.0 ));
-matrix u_tilda( ny+2 , vector<double>( nx+2 , 0.0 ));
-matrix v_tilda( ny+2 , vector<double>( nx+2 , 0.0 ));
+matrix  u_tilda( ny+2 , vector<double>( nx+2 , 0.0 ));
+matrix  v_tilda( ny+2 , vector<double>( nx+2 , 0.0 ));
 
 /* MATRICES FOR THE PRESSURE POISSON PROBLEM */
 matrix  P_corr( ny+2 , vector<double>( nx+2 , 0.0 ));
@@ -68,8 +69,6 @@ int main(){
         Pressure_Poisson();
         Velocity_Correction();
         Velocity_L2Norm();
-        u_nm1 = u_n ;
-        v_nm1 = v_n ;
     cout<<" TIME ITER :"<<TIME_ITER<<endl<<'\t';    
     cout<<" err_u : "<<err_u<<endl<<'\t';
     cout<<" err_v : "<<err_u<<endl;
@@ -99,36 +98,42 @@ void FV_Momentum(){
     /* X-MOMENTUM Time Integration */
     for( int i=1 ; i<ny+1 ; ++i ){
         for( int j=2 ; j<nx+1 ; ++j ){
-            double ue = 0.5*( u_n[i][j] + u_n[i][j+1] );
-            double uw = 0.5*( u_n[i][j-1] + u_n[i][j] );
-            double un = 0.5*( u_n[i][j] + u_n[i+1][j] );
-            double us = 0.5*( u_n[i-1][j] + u_n[i][j] );
-            double vn = 0.5*( v_n[i+1][j-1] + v_n[i][j] );
-            double vs = 0.5*( v_n[i][j-1] + v_n[i][j] );
+            double ue_n = 0.5*( u_n[i][j] + u_n[i][j+1] );                   double ue_nm1 = 0.5*( u_nm1[i][j] + u_nm1[i][j+1] );
+            double uw_n = 0.5*( u_n[i][j-1] + u_n[i][j] );                   double uw_nm1 = 0.5*( u_nm1[i][j-1] + u_nm1[i][j] );
+            double un_n = 0.5*( u_n[i][j] + u_n[i+1][j] );                   double un_nm1 = 0.5*( u_nm1[i][j] + u_nm1[i+1][j] );
+            double us_n = 0.5*( u_n[i-1][j] + u_n[i][j] );                   double us_nm1 = 0.5*( u_nm1[i-1][j] + u_nm1[i][j] );
+            double vn_n = 0.5*( v_n[i+1][j-1] + v_n[i][j] );                 double vn_nm1 = 0.5*( v_nm1[i+1][j-1] + v_nm1[i][j] );
+            double vs_n = 0.5*( v_n[i][j-1] + v_n[i][j] );                   double vs_nm1 = 0.5*( v_nm1[i][j-1] + v_nm1[i][j] );
 
-        double Conv = -( ue*ue - uw*uw )/dx -( un*vn - us*vs )/dy ;
-        double Diff = (1.0/Re)*( ( u_n[i][j+1] -2*u_n[i][j] + u_n[i][j-1] )/pow( dx ,2 ) + ( u_n[i+1][j] -2*u_n[i][j] + u_n[i-1][j] )/pow( dy ,2 ) ) ;    
-        u_n[i][j] = u_n[i][j] + dt*( Conv + Diff ) ;
+        double Conv_n = -( ue_n*ue_n - uw_n*uw_n )/dx -( un_n*vn_n - us_n*vs_n )/dy;  
+        double Conv_nm1 = -( ue_nm1*ue_nm1 - uw_nm1*uw_nm1 )/dx -( un_nm1*vn_nm1 - us_nm1*vs_nm1 )/dy ;
+        double Diff_n = (1.0/Re)*( ( u_n[i][j+1] -2*u_n[i][j] + u_n[i][j-1] )/pow( dx ,2 ) + ( u_n[i+1][j] -2*u_n[i][j] + u_n[i-1][j] )/pow( dy ,2 ) ) ;   
+        double Diff_nm1 = (1.0/Re)*( ( u_nm1[i][j+1] -2*u_nm1[i][j] + u_nm1[i][j-1] )/pow( dx ,2 ) + ( u_nm1[i+1][j] -2*u_nm1[i][j] + u_nm1[i-1][j] )/pow( dy ,2 ) ) ;
+        u_tilda[i][j] = u_n[i][j] + dt*( 1.5*( Conv_n + Diff_n ) + 0.5*( Conv_nm1 + Diff_nm1 ) );
         }
     }
     
     /* Y-MOMENTUM Time Integration */
     for( int i=2 ; i<ny+1 ; ++i ){
         for( int j=1 ; j<nx+1 ; ++j){
-            double ve = 0.5*( v_n[i][j] + v_n[i][j+1] );
-            double vw = 0.5*( v_n[i][j-1] + v_n[i][j] );
-            double vn = 0.5*( v_n[i][j] + v_n[i+1][j] );
-            double vs = 0.5*( v_n[i-1][j] + v_n[i][j] );
-            double ue = 0.5*( u_n[i-1][j+1] + u_n[i][j+1] );
-            double uw = 0.5*( u_n[i-1][j] + u_n[i][j] );
+            double ve_n = 0.5*( v_n[i][j] + v_n[i][j+1] );                     double ve_nm1 = 0.5*( v_nm1[i][j] + v_nm1[i][j+1] );
+            double vw_n = 0.5*( v_n[i][j-1] + v_n[i][j] );                     double vw_nm1 = 0.5*( v_nm1[i][j-1] + v_nm1[i][j] );
+            double vn_n = 0.5*( v_n[i][j] + v_n[i+1][j] );                     double vn_nm1 = 0.5*( v_nm1[i][j] + v_nm1[i+1][j] );
+            double vs_n = 0.5*( v_n[i-1][j] + v_n[i][j] );                     double vs_nm1 = 0.5*( v_nm1[i-1][j] + v_nm1[i][j] );
+            double ue_n = 0.5*( u_n[i-1][j+1] + u_n[i][j+1] );                 double ue_nm1 = 0.5*( u_nm1[i-1][j+1] + u_nm1[i][j+1] );
+            double uw_n = 0.5*( u_n[i-1][j] + u_n[i][j] );                     double uw_nm1 = 0.5*( u_nm1[i-1][j] + u_nm1[i][j] );
 
-        double Conv = -( ue*ve - uw*vw )/dx - ( vn*vn - vs*vs )/dy ;
-        double Diff = (1.0/Re)*( (v_n[i][j+1] - 2*v_n[i][j] + v_n[i][j-1])/pow( dx ,2 ) + ( v_n[i+1][j] -2*v_n[i][j] + v_n[i-1][j])/pow( dy , 2 ) );
-        v_n[i][j] = v_n[i][j] + dt*( Conv + Diff ) ;
+        double Conv_n = -( ue_n*ve_n - uw_n*vw_n )/dx - ( vn_n*vn_n - vs_n*vs_n )/dy ;
+        double Conv_nm1 = -( ue_nm1*ve_nm1 - uw_nm1*vw_nm1 )/dx - ( vn_nm1*vn_nm1 - vs_nm1*vs_nm1 )/dy ;
+        double Diff_n = (1.0/Re)*( (v_n[i][j+1] - 2*v_n[i][j] + v_n[i][j-1])/pow( dx ,2 ) + ( v_n[i+1][j] -2*v_n[i][j] + v_n[i-1][j])/pow( dy , 2 ) );
+        double Diff_nm1 = (1.0/Re)*( (v_nm1[i][j+1] - 2*v_nm1[i][j] + v_nm1[i][j-1])/pow( dx ,2 ) + ( v_nm1[i+1][j] -2*v_nm1[i][j] + v_nm1[i-1][j])/pow( dy , 2 ) ) ;
+        v_tilda[i][j] = v_n[i][j] + dt*( 1.5*( Conv_n + Diff_n ) + 0.5*( Conv_nm1 + Diff_nm1 ) );
         }
     }
 
-    std::tie( u_n , v_n ) = Update_Boundaries( u_n , v_n );
+    u_nm1 = u_n ;
+    v_nm1 = v_n ;
+    std::tie( u_tilda , v_tilda ) = Update_Boundaries( u_tilda , v_tilda );
       
 }
 
@@ -144,7 +149,7 @@ void Pressure_Poisson(){
     /* SOURCE TERMS */
     for( int i=1 ; i<ny+1 ; ++i ){
         for( int j=1 ; j<nx +1 ; ++j ){
-            S[i][j] = (1.0/dt)*( ( u_n[i][j+1] - u_n[i][j] )/dx + ( v_n[i+1][j] - v_n[i][j] )/dy );
+            S[i][j] = (1.0/dt)*( ( u_tilda[i][j+1] - u_tilda[i][j] )/dx + ( v_tilda[i+1][j] - v_tilda[i][j] )/dy );
         }
     }
     /* Solving Discreet POISSON Equation */
@@ -172,12 +177,12 @@ void Pressure_Poisson(){
 void Velocity_Correction(){
     for( int i=1 ; i<ny+1 ; ++i ){
         for( int j=2 ; j<nx+1 ; ++j ){
-            u_n[i][j] = u_n[i][j] - dt*( P_corr[i][j] - P_corr[i][j-1]  )/dx ; 
+            u_n[i][j] = u_tilda[i][j] - dt*( P_corr[i][j] - P_corr[i][j-1]  )/dx ; 
         }
     }
     for( int i=2 ; i<ny+1 ; ++i ){
         for( int j=1 ; j<nx+1 ; ++j ){
-            v_n[i][j] = v_n[i][j] - dt*( P_corr[i][j] - P_corr[i-1][j] )/dy ;
+            v_n[i][j] = v_tilda[i][j] - dt*( P_corr[i][j] - P_corr[i-1][j] )/dy ;
         }
     }
     std::tie( u_n , v_n ) = Update_Boundaries( u_n , v_n );
@@ -211,7 +216,7 @@ void printmatrix( matrix mat ){
 }
 
 void Output_Solution(){
-    std::ofstream fout("u.txt");
+    ofstream fout("u.txt");
     for( int i=0 ; i<ny+2 ; ++i  ){
         for( int j=0 ; j<nx+2 ; ++j){
             fout<<u_n[i][j]<<'\t';
