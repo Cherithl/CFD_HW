@@ -15,6 +15,7 @@ void FV_Momentum();
 void Pressure_Poisson();
 void Velocity_Correction();
 void Velocity_L2Norm();
+void Output_Solution();
 
 /* FUNCTION FOR OPERATIONS */
 std::tuple<matrix,matrix> Update_Boundaries( matrix , matrix );
@@ -22,12 +23,12 @@ void printmatrix(matrix);
 
 /*------------------------------------------------------------------------------------------*/
 /*  PARAMETERS  */
-int nx = 32 , ny=nx;
+int nx = 128 , ny=nx;
 double lx = 1 , ly=lx ;
 double dx = lx/nx , dy = ly/ny;
 
 /* PHYSICAL PARAMETERS */
-double Re = 10;
+double Re = 100;
 double dt = 5.0E-4;
 
 /* PARAMETERS FOR CONVERGENCE AND REFERENCE */
@@ -75,6 +76,7 @@ int main(){
     printmatrix( u_n ); 
     cout<<endl<<endl;
     printmatrix( v_n );
+    Output_Solution();
 
 }
 
@@ -205,4 +207,26 @@ void printmatrix( matrix mat ){
             if( j==Cols-1 ) cout<<endl;
         }
     } 
+}
+
+void Output_Solution(){
+    ofstream fout("u.txt");
+    for( int i=0 ; i<ny+2 ; ++i  ){
+        for( int j=0 ; j<nx+2 ; ++j){
+            fout<<u_n[i][j]<<'\t';
+            if( j==ny+1 ) fout<<endl;
+        }
+    }
+    fout.close();
+
+    // ofstream fout("v.txt");
+    // for( int i=0 ; i<ny+2 ; ++i  ){
+    //     for( int j=0 ; j<nx+2 ; ++j){
+    //         fout<<v_n[i][j]<<'\t';
+    //         if( j==ny+1 ) fout<<endl;
+    //     }
+    // }
+    // fout.close();
+
+
 }
