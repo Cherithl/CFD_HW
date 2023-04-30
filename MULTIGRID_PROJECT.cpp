@@ -32,7 +32,7 @@ void printmatrix(matrix);
 
 /*------------------------------------------------------------------------------------------*/
 /*  PARAMETERS  */
-int nx = 32 , ny=nx;
+int nx = 128 , ny=nx;
 double lx = 1 , ly=lx ;
 double dx = lx/nx , dy = ly/ny;
 
@@ -156,8 +156,10 @@ void Pressure_Poisson(){
         }
     }
 
-matrix res_h( ny+2 , vector<double>( nx+2 , 0.0 ) );
+    matrix res_h( ny, vector<double>( nx , 0.0) );
+
 res_h = Smooth();
+
     
 }
 
@@ -358,7 +360,7 @@ void printmatrix( matrix mat ){
 }
 
 void Output_Solution(){
-    ofstream fout("u_32.txt");
+    ofstream fout("u_128.txt");
     for( int i=0 ; i<ny+2 ; ++i  ){
         for( int j=0 ; j<nx+2 ; ++j){
             fout<<u_n[i][j]<<'\t';
@@ -367,7 +369,7 @@ void Output_Solution(){
     }
     fout.close();
 
-    fout.open("v_32.txt");
+    fout.open("v_128.txt");
     for( int i=0 ; i<ny+2 ; ++i  ){
         for( int j=0 ; j<nx+2 ; ++j){
             fout<<v_n[i][j]<<'\t';
