@@ -33,7 +33,7 @@ double Re = 100;
 double dt = 5.0E-4;
 
 /* PARAMETERS FOR CONVERGENCE AND REFERENCE */
-int TIME_ITER =0 ;
+int TIME_ITER =0 ; double res_avg =1.0;
 double err_u = 1 , err_v = err_u;
 
 /*------------------------------------------------------------------------------------------*/
@@ -153,6 +153,8 @@ void Pressure_Poisson(){
         }
     }
     /* Solving Discreet POISSON Equation */
+    res_avg =1.0;
+   while( res_avg > tol ){
     for( int i=1 ; i<ny+1 ; ++i ){
         for( int j=1 ; j<nx+1 ; ++j){
             double AE = Ae[i][j] , AW = Aw[i][j] , AN = An[i][j] , AS = As[i][j] ;
@@ -161,7 +163,7 @@ void Pressure_Poisson(){
         }
     }
 
-    double res_avg = 0.0 ; double dummy;
+    res_avg = 0.0 ; double dummy;
     for( int i=1 ; i<ny+1 ; ++i ){
         for( int j=1 ; j<nx+1 ; ++j ){
             double AE = Ae[i][j] , AW = Aw[i][j] , AN = An[i][j] , AS = As[i][j] ;
@@ -171,6 +173,9 @@ void Pressure_Poisson(){
         }
     }
     res_avg = pow( res_avg , 0.5 );
+
+   } 
+    
 
 }
 
