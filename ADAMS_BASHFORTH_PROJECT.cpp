@@ -33,7 +33,7 @@ double dx = lx/nx , dy = ly/ny;
 
 /* PHYSICAL PARAMETERS */
 double Re = 100;
-double dt = 6.25E-3;
+double dt = 5.0E-4;
 
 /* PARAMETERS FOR CONVERGENCE AND REFERENCE */
 int TIME_ITER =0 ; double res_avg = 1.0 ; double w= 2.0/(1 + sin( M_PI/( nx + 1 )  ) )  ; // TAKE THIS OFF BRO

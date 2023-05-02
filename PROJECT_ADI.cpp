@@ -35,10 +35,10 @@ double dx = lx/nx , dy = ly/ny;
 
 /* PHYSICAL PARAMETERS */
 double Re = 100;
-double dt = 6.25E-3;
+double dt = 5.0E-4;
 
 /* PARAMETERS FOR CONVERGENCE AND REFERENCE */
-int TIME_ITER =0 ; double res_avg = 1.0 ; double w= 2.0/(1 + sin( M_PI/( nx + 1 )  ) )  ;
+int TIME_ITER =0 ; double res_avg = 1.0 ; double w= 1.32  ;
 double err_u = 1 , err_v = err_u;
 
 /*------------------------------------------------------------------------------------------*/
@@ -206,8 +206,8 @@ void TDMA_X( int row , matrix Source){
     for( int j=1 ; j<nx+1 ; ++j){
         AE[j] = Ae[row][j] , AW[j] = Aw[row][j] , AN[j] = An[row][j] , AS[j] = As[row][j] ;
         AP[j] = -( AE[j] + AW[j] + AN[j] + AS[j] ) ; 
-        S[j]  = Source[row][j] - AN[j]*P_corr[row+1][j] - AS[j]*P_corr[row-1][j] ;
-        //if( row ==2 ) cout<<" AW="<<AW[j]<<'\t'<<" AP="<<AP[j]<<" AE="<<AE[j]<<endl;
+        S[j]  = w*( Source[row][j] - AN[j]*P_corr[row+1][j] - AS[j]*P_corr[row-1][j] ) + AP[j]*(1-w)*P_corr[row][j] ;
+        AW[j] = w*AW[j] , AE[j] = w*AE[j] ; 
     }
 /*--------------------------- FOWRARD SUBSTITUTION---------------------- */
     for( int j=2 ; j<nx+1 ; ++j){
@@ -227,7 +227,8 @@ void TDMA_Y( int col , matrix Source ){
     for( int i=1 ; i<ny+1 ; ++i){
         AE[i] = Ae[i][col] , AW[i] = Aw[i][col] , AN[i] = An[i][col] , AS[i] = As[i][col] ;
         AP[i] = -( AE[i] + AW[i] + AN[i] + AS[i] );
-        S[i]  = Source[i][col] - AE[i]*P_corr[i][col+1] - AW[i]*P_corr[i][col-1] ;
+        S[i]  = w*( Source[i][col] - AE[i]*P_corr[i][col+1] - AW[i]*P_corr[i][col-1] ) + AP[i]*(1-w)*P_corr[i][col] ;
+        AS[i] = w*AS[i] , AN[i] = w*AN[i] ;
     }
 /*--------------------------- FOWRARD SUBSTITUTION---------------------- */
     for( int i=2 ; i<ny+1 ; ++i){
