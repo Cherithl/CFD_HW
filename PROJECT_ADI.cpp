@@ -16,14 +16,8 @@ auto start =high_resolution_clock::now();
 /* FUNCTIONS FOR ALGORITHM */ /*------------------------------------------------------------*/
 void FV_Momentum();
 void Pressure_Poisson();
-matrix Smooth();
-std::tuple<matrix,matrix> Coarse_Smooth( matrix , matrix , int);
-matrix Restrict(matrix);
-matrix Prolongate(matrix);
-matrix Correct(matrix,matrix);
-matrix init(matrix);
-
-
+void TDMA_X( int , matrix);
+void TDMA_Y( int , matrix);
 void Velocity_Correction();
 void Velocity_L2Norm();
 void Output_Solution();
@@ -35,16 +29,16 @@ void printmatrix(matrix);
 
 /*------------------------------------------------------------------------------------------*/
 /*  PARAMETERS  */
-int nx = 128 , ny=nx;
+int nx = 32 , ny=nx;
 double lx = 1 , ly=lx ;
 double dx = lx/nx , dy = ly/ny;
 
 /* PHYSICAL PARAMETERS */
 double Re = 100;
-double dt = 1.25E-4;
+double dt = 6.25E-3;
 
 /* PARAMETERS FOR CONVERGENCE AND REFERENCE */
-int TIME_ITER =0 ; double res_avg = 1.0 ; double w=1.9520932338500549444323581284366638578012850516168826250714063047;
+int TIME_ITER =0 ; double res_avg = 1.0 ; double w= 2.0/(1 + sin( M_PI/( nx + 1 )  ) )  ;
 double err_u = 1 , err_v = err_u;
 
 /*------------------------------------------------------------------------------------------*/
@@ -75,7 +69,7 @@ int main(){
     std::tie( u_n , v_n ) = Update_Boundaries( u_n , v_n );
     u_nm1 = u_n ; v_nm1 = v_n;
     double vel_tol = 1E-8 ; 
-    while( err_u > vel_tol || TIME_ITER < 4 ){
+    while( err_u > vel_tol || TIME_ITER < 1 ){
         ++TIME_ITER;
         FV_Momentum();
         Pressure_Poisson();
@@ -85,20 +79,20 @@ int main(){
     cout<<" err_u : "<<err_u<<endl<<'\t';
     cout<<" err_v : "<<err_u<<endl;
     }
-    printmatrix( v_n ); 
+    //printmatrix( v_n ); 
     cout<<endl<<endl;
-    printmatrix( u_n );
-    Output_Solution();
+    //printmatrix( u_n );
+    //Output_Solution();
 
 cout<<endl<<endl<<endl;
     auto stop = high_resolution_clock::now();
             auto duration =duration_cast<milliseconds>(stop -start);
-            cout<<'\n'<<"The time taken for convergence is : "<<duration.count() <<"\n";
+            cout<<'\n'<<"The time taken for convergence is : "<<duration.count() <<" milliseconds \n";
 
   std::ofstream outfile;
 
   outfile.open("CPU_time_test.txt", std::ios_base::app); // append instead of overwrite
-  outfile<<endl<<" 128 x 128 "<<'\t'<<dt<<'\t'<<duration.count() ;
+  outfile<<endl<<" 32 x 32 "<<'\t'<<dt<<'\t'<<duration.count() ;
 
 }
 
@@ -169,17 +163,6 @@ void Pressure_Poisson(){
         }
     }
 
-    matrix res_h( ny, vector<double>( nx , 0.0) );
-
-res_h = Smooth();
-
-    
-}
-
-
-
-/* -------------------===============================FINE SMOOTHING=============================-----------------------*/
-matrix Smooth(){
     matrix  S( ny+2 , vector<double>( nx+2 , 0.0 ) );
     matrix res( ny+2, vector<double>( nx+2 , 0.0 ) );
     /* SOURCE TERMS */
@@ -190,16 +173,14 @@ matrix Smooth(){
     }    
     /* Solving Discreet POISSON Equation */
 double tol = 1E-5; int ITER=0; res_avg =1.0 ;
-    while( res_avg>tol ){
+    while( res_avg>tol || ITER<10 ){
         ++ITER;
-        //cout<<" PRESSURE ITER : "<<ITER<<endl;
-        for( int i=1 ; i<ny+1 ; ++i ){
-            for( int j=1 ; j<nx+1 ; ++j){
-                double AE = Ae[i][j] , AW = Aw[i][j] , AN = An[i][j] , AS = As[i][j] ;
-                double AP = AE + AW + AN + AS ;
-                P_corr[i][j] = (1-w)*P_corr[i][j] + w*(1.0/AP)*( AE*P_corr[i][j+1] + AW*P_corr[i][j-1] + AN*P_corr[i+1][j] + AS*P_corr[i-1][j] - S[i][j] ) ;
-            }
+        
+        for( int i=1 ; i<ny+1 ; ++i){
+            TDMA_X( i , S );
+            TDMA_Y( i , S );
         }
+  
         res_avg = 0.0;
         for( int i=1 ; i<ny+1 ; ++i ){
             for( int j=1 ; j<nx+1 ; ++j ){
@@ -209,123 +190,58 @@ double tol = 1E-5; int ITER=0; res_avg =1.0 ;
                 res_avg +=  pow( res[i][j] , 2 )/(nx*ny);
             }
         }
-        res_avg = pow( res_avg , 0.5 );
-
+        
     }
     cout<<endl<<endl;
     cout<<" ITER "<<ITER<<'\t'; cout<<" res_avg "<<res_avg<<endl;
-    return res;
-}
 
-
-/* ---------------------------=========================RESTRICTION==============================-------------------*/
-matrix Restrict(matrix res_h){
-    int Rows_h = res_h.size();     
-    int Cols_h = res_h[0].size(); 
-
-    int Rows_H = (Rows_h+1)/2;
-    int Cols_H = (Cols_h+1)/2; 
     
-double res_max=0; //DELETE THIS MAN
-    matrix res_H( Rows_H , vector<double>( Cols_H , 0.0 ) );
-    
-        for(int i=1;i<Rows_H-1;++i){
-            for(int j=1;j<Cols_H-1;++j){
-                res_H[i][j]= (4*res_h[2*i][2*j]  + res_h[2*i-1][2*j] + res_h[2*i+1][2*j] + res_h[2*i][2*j +1] + res_h[2*i][2*j -1] )/8;// (4*P + S + N + E + W)*(1/8)    
-            }
-        }  
-return res_H;
 }
 
-/* --------------------------------========================== COARSE LEVEL SMOOTHENING =========================----------------------------------------- */
-std::tuple<matrix,matrix> Coarse_Smooth( matrix E_H , matrix res_H , int level ){
- 
-    int Rows_H = res_H.size();
-    int Cols_H = res_H[0].size();
-    double dx_H = dx*pow(2,level) ; 
-    double dy_H = dy*pow(2,level);
 
-//matrix E_H( Rows_H , vector<double>(Cols_H ,0.0));
-matrix res_coarse( Rows_H , vector<double>(Cols_H , 0.0));   
-        double res_coarse_new=1; 
-        double res_coarse_old=1;
-        int iter_coarse=0;
-    while( res_coarse_new/res_coarse_old <0.5 || iter_coarse<1 ){  
-                res_coarse_old = res_coarse_new ;                    //INITIALISING MAX RESIDUAL FOR THE RESPECTIVE ITERATION
-                res_coarse_new = 0; 
-                for( int i=1 ; i<Rows_H-1 ; ++i ){
-                    for( int j=1 ; j< Cols_H-1 ; ++j ){
-                        E_H[i][j] =0.25*( 4*(1-w)*E_H[i][j] + w*( E_H[i][j+1] + E_H[i][j-1] + E_H[i+1][j] + E_H[i-1][j] - dx_H*dy_H*(res_H[i][j]) ));
-                    }
-                }               
-
-                for(int i=1 ; i<Rows_H-1 ; ++i){
-                    for( int j=1 ; j<Cols_H-1 ; ++j){
-                        res_coarse[i][j] = -( (E_H[i][j+1]+E_H[i][j-1]+E_H[i+1][j]+E_H[i-1][j]-4*E_H[i][j] )/(dx_H*dy_H)  -res_H[i][j])   ;                         
-                        res_coarse_new += pow( res_coarse[i][j] , 2 )/( (Rows_H-2)*(Cols_H -2) );
-                    }
-                }
-                res_coarse_new = pow(res_coarse_new , 0.5);
+/*======================================================TDMA FUNCIONS===================================================================================================================*/
+void TDMA_X( int row , matrix Source){
+    double AE[nx+2] , AW[nx+2] , AN[nx+2] , AS[nx+2] , AP[nx+2] ,  S[nx+2] ;
+/*---------------- SETTING UP THE COEFFICIENT MATRIX AND SOURCE VECTOR--------------*/
+    for( int j=1 ; j<nx+1 ; ++j){
+        AE[j] = Ae[row][j] , AW[j] = Aw[row][j] , AN[j] = An[row][j] , AS[j] = As[row][j] ;
+        AP[j] = -( AE[j] + AW[j] + AN[j] + AS[j] ) ; 
+        S[j]  = Source[row][j] - AN[j]*P_corr[row+1][j] - AS[j]*P_corr[row-1][j] ;
+        //if( row ==2 ) cout<<" AW="<<AW[j]<<'\t'<<" AP="<<AP[j]<<" AE="<<AE[j]<<endl;
     }
-
-return std::make_tuple( res_coarse , E_H  ) ;
-
-}
-
-/* -------------------------============================PROLONGATION==============================--------------*/
-matrix Prolongate(matrix E_H){
-    int Rows_H = E_H.size();
-    int Cols_H = E_H[0].size();
-
-    int Rows_h=Rows_H*2-1; int Cols_h = Cols_H*2 -1 ;
-matrix E_h( Rows_h, vector<double>( Cols_h , 0.0)) ; 
-double E_h_max=0;
-  for(int i=0 ; i<Rows_h ; ++i){
-    for( int j=0 ; j<Cols_h ; ++j){
-        if( i%2==0 && j%2==0 ){
-            E_h[i][j] = E_H[i/2][j/2];
-        }
-        else if( i%2==0 && j%2!=0){
-            E_h[i][j] = ( E_H[i/2][(j+1)/2] + E_H[i/2][(j-1)/2] )/2 ; 
-        }
-        else if( i%2!=0 && j%2==0){
-            E_h[i][j] = ( E_H[(i-1)/2][j/2] + E_H[(i+1)/2][j/2] )/2 ;
-        }
-        else{
-            E_h[i][j] = ( E_H[(i-1)/2][(j-1)/2] + E_H[(i-1)/2][(j+1)/2] + E_H[(i+1)/2][(j-1)/2] + E_H[(i+1)/2][(j+1)/2] )/4;
-        }
-        if( abs(E_h[i][j]) > abs(E_h_max) ){ E_h_max=E_h[i][j]; }
+/*--------------------------- FOWRARD SUBSTITUTION---------------------- */
+    for( int j=2 ; j<nx+1 ; ++j){
+        AP[j] = AP[j] - ( AW[j]/AP[j-1] )*AE[j-1];
+        S[j]  = S[j]  - ( AW[j]/AP[j-1] )*S[j-1] ;
     }
-  }     
-//cout<<"MAX CORRECTION : "<<E_h_max<<endl;
-return E_h;
-}
-
-/* --------------==============================CORRECTION===================================------------------  */
-matrix Correct( matrix U , matrix E_h){
-
-    int Rows = E_h.size();
-    int Cols = E_h[0].size();
-
-    double E_h_max=0;
-    for(int i=1;i<Rows-1;++i){
-        for(int j=1;j<Cols-1;++j){
-            U[i][j] += E_h[i][j];
-        }
+/*--------------------------- BACKWARD SUBSTITUTION---------------------- */
+    for( int j=nx ; j>0 ; --j ){
+        P_corr[row][j] = ( S[j] - AE[j]*P_corr[row][j+1] )/AP[j];
     }
-    return U;
 }
-/*----------------------------------------INITIALIZATION OF ERROR VECTORS------------------------------------------*/
-matrix init(matrix mat){
-    int Rows= mat.size();
-    int Cols= mat[0].size();
-    for( int i=0; i<Rows ; ++i){
-        for( int j=0 ; j<Cols ; ++j ){
-            mat[i][j]=0;
-        }
+
+
+void TDMA_Y( int col , matrix Source ){
+    double AE[ny+2] , AW[ny+2] , AN[ny+2] , AS[ny+2] , AP[ny+2] , S[ny+2] ;
+/* ------------- -SETTING UP COEFFICIENT MATRIX AND SOURCE VECTOR------------ */     
+    for( int i=1 ; i<ny+1 ; ++i){
+        AE[i] = Ae[i][col] , AW[i] = Aw[i][col] , AN[i] = An[i][col] , AS[i] = As[i][col] ;
+        AP[i] = -( AE[i] + AW[i] + AN[i] + AS[i] );
+        S[i]  = Source[i][col] - AE[i]*P_corr[i][col+1] - AW[i]*P_corr[i][col-1] ;
     }
-    return mat;
+/*--------------------------- FOWRARD SUBSTITUTION---------------------- */
+    for( int i=2 ; i<ny+1 ; ++i){
+        AP[i] = AP[i] - ( AS[i]/AP[i-1] )*AN[i-1];
+        S[i]  = S[i]  - ( AS[i]/AP[i-1] )*S[i-1] ;
+    }
+/*--------------------------- BACKWARD SUBSTITUTION---------------------- */
+    for( int i=ny ; i>0 ; --i){
+        P_corr[i][col] = ( S[i] - AN[i]*P_corr[i+1][col] )/AP[i];
+    }
 }
+
+
+
 
 
 /*==================================================VELOCITY CORRECTIONS AND ERRORS DONT GO DOWN BRO=========================================================================================*/
@@ -373,7 +289,7 @@ void printmatrix( matrix mat ){
 }
 
 void Output_Solution(){
-    ofstream fout("u_128.txt");
+    ofstream fout("u_32.txt");
     for( int i=0 ; i<ny+2 ; ++i  ){
         for( int j=0 ; j<nx+2 ; ++j){
             fout<<u_n[i][j]<<'\t';
@@ -382,7 +298,7 @@ void Output_Solution(){
     }
     fout.close();
 
-    fout.open("v_128.txt");
+    fout.open("v_32.txt");
     for( int i=0 ; i<ny+2 ; ++i  ){
         for( int j=0 ; j<nx+2 ; ++j){
             fout<<v_n[i][j]<<'\t';

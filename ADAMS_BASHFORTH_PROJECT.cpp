@@ -8,8 +8,11 @@
 #include <utility>
 
 using namespace std;
+using namespace std::chrono;
 typedef vector<vector<double>> matrix;
 
+
+auto start =high_resolution_clock::now();
 /* FUNCTIONS FOR ALGORITHM */ /*------------------------------------------------------------*/
 void FV_Momentum();
 void Pressure_Poisson();
@@ -24,16 +27,16 @@ void printmatrix(matrix);
 
 /*------------------------------------------------------------------------------------------*/
 /*  PARAMETERS  */
-int nx = 128 , ny=nx;
+int nx = 32 , ny=nx;
 double lx = 1 , ly=lx ;
 double dx = lx/nx , dy = ly/ny;
 
 /* PHYSICAL PARAMETERS */
 double Re = 100;
-double dt = 5.0E-4;
+double dt = 6.25E-3;
 
 /* PARAMETERS FOR CONVERGENCE AND REFERENCE */
-int TIME_ITER =0 ; double res_avg =1.0;
+int TIME_ITER =0 ; double res_avg = 1.0 ; double w= 2.0/(1 + sin( M_PI/( nx + 1 )  ) )  ; // TAKE THIS OFF BRO
 double err_u = 1 , err_v = err_u;
 
 /*------------------------------------------------------------------------------------------*/
@@ -62,8 +65,9 @@ int main(){
         As[1][j] = 0.0;
     }
     std::tie( u_n , v_n ) = Update_Boundaries( u_n , v_n );
+    u_nm1 = u_n ; v_nm1 = v_n;
     double vel_tol = 1E-8 ; 
-    while( err_u > vel_tol || TIME_ITER < 10 ){
+    while( err_u > vel_tol || TIME_ITER < 1 ){
         ++TIME_ITER;
         FV_Momentum();
         Pressure_Poisson();
@@ -73,10 +77,20 @@ int main(){
     cout<<" err_u : "<<err_u<<endl<<'\t';
     cout<<" err_v : "<<err_u<<endl;
     }
-    printmatrix( v_n ); 
+    //printmatrix( v_n ); 
     cout<<endl<<endl;
-    printmatrix( u_n );
-    Output_Solution();
+    //printmatrix( u_n );
+    //Output_Solution();
+
+cout<<endl<<endl<<endl;
+    auto stop = high_resolution_clock::now();
+            auto duration =duration_cast<milliseconds>(stop -start);
+            cout<<'\n'<<"The time taken for convergence is : "<<duration.count() <<" milliseconds \n";
+
+  std::ofstream outfile;
+
+  outfile.open("CPU_time_test.txt", std::ios_base::app); // append instead of overwrite
+  outfile<<endl<<" 32 x 32 "<<'\t'<<dt<<'\t'<<duration.count() ;
 
 }
 
@@ -138,47 +152,57 @@ void FV_Momentum(){
 }
 
 
+/*========================================================PRESSURE EQUATION SOLVER=================================================================================================== */
 void Pressure_Poisson(){
-    matrix  S( ny+2 , vector<double>( nx+2 , 0.0 ));
     /* PRESSURE Initialization */
     for( int i=1 ; i<ny+1 ; ++i ){
         for( int j=1 ; j<nx+1 ; ++j ){
             P_corr[i][j] = 0.0;
         }
     }
+
+    matrix  S( ny+2 , vector<double>( nx+2 , 0.0 ) );
+    matrix res( ny+2, vector<double>( nx+2 , 0.0 ) );
     /* SOURCE TERMS */
     for( int i=1 ; i<ny+1 ; ++i ){
         for( int j=1 ; j<nx +1 ; ++j ){
             S[i][j] = (1.0/dt)*( ( u_tilda[i][j+1] - u_tilda[i][j] )/dx + ( v_tilda[i+1][j] - v_tilda[i][j] )/dy );
         }
-    }
+    }    
     /* Solving Discreet POISSON Equation */
-    res_avg =1.0;
-   while( res_avg > tol ){
-    for( int i=1 ; i<ny+1 ; ++i ){
-        for( int j=1 ; j<nx+1 ; ++j){
-            double AE = Ae[i][j] , AW = Aw[i][j] , AN = An[i][j] , AS = As[i][j] ;
-            double AP = AE + AW + AN + AS ;
-            P_corr[i][j] = (1.0/AP)*( AE*P_corr[i][j+1] + AW*P_corr[i][j-1] + AN*P_corr[i+1][j] + AS*P_corr[i-1][j] - S[i][j] ) ;
+double tol = 1E-5; int ITER=0; res_avg =1.0 ;
+    while( res_avg>tol ){
+        ++ITER;
+        //cout<<" PRESSURE ITER : "<<ITER<<endl;
+        for( int i=1 ; i<ny+1 ; ++i ){
+            for( int j=1 ; j<nx+1 ; ++j){
+                double AE = Ae[i][j] , AW = Aw[i][j] , AN = An[i][j] , AS = As[i][j] ;
+                double AP = AE + AW + AN + AS ;
+                P_corr[i][j] = (1-w)*P_corr[i][j] + w*(1.0/AP)*( AE*P_corr[i][j+1] + AW*P_corr[i][j-1] + AN*P_corr[i+1][j] + AS*P_corr[i-1][j] - S[i][j] ) ;
+            }
         }
-    }
-
-    res_avg = 0.0 ; double dummy;
-    for( int i=1 ; i<ny+1 ; ++i ){
-        for( int j=1 ; j<nx+1 ; ++j ){
-            double AE = Ae[i][j] , AW = Aw[i][j] , AN = An[i][j] , AS = As[i][j] ;
-            double AP = AE + AW + AN + AS ;
-            dummy    =  AP*P_corr[i][j] -( AE*P_corr[i][j+1] + AW*P_corr[i][j-1] + AN*P_corr[i+1][j] + AS*P_corr[i-1][j] - S[i][j] );     
-            res_avg +=  pow( dummy , 2 )/(nx*ny);
+        res_avg = 0.0;
+        for( int i=1 ; i<ny+1 ; ++i ){
+            for( int j=1 ; j<nx+1 ; ++j ){
+                double AE = Ae[i][j] , AW = Aw[i][j] , AN = An[i][j] , AS = As[i][j] ;
+                double AP = AE + AW + AN + AS ;
+                res[i][j]    =  AP*P_corr[i][j] -( AE*P_corr[i][j+1] + AW*P_corr[i][j-1] + AN*P_corr[i+1][j] + AS*P_corr[i-1][j] - S[i][j] );     
+                res_avg +=  pow( res[i][j] , 2 )/(nx*ny);
+            }
         }
-    }
-    res_avg = pow( res_avg , 0.5 );
+        res_avg = pow( res_avg , 0.5 );
 
-   } 
+    }
+    cout<<endl<<endl;
+    cout<<" ITER "<<ITER<<'\t'; cout<<" res_avg "<<res_avg<<endl;
+
     
-
 }
 
+
+
+
+/*==================================================VELOCITY CORRECTIONS AND ERRORS DONT GO DOWN BRO=========================================================================================*/
 void Velocity_Correction(){
     for( int i=1 ; i<ny+1 ; ++i ){
         for( int j=2 ; j<nx+1 ; ++j ){
@@ -187,7 +211,7 @@ void Velocity_Correction(){
     }
     for( int i=2 ; i<ny+1 ; ++i ){
         for( int j=1 ; j<nx+1 ; ++j ){
-            v_n[i][j] = v_tilda[i][j] - dt*( P_corr[i][j] - P_corr[i-1][j] )/dy ;
+            v_n[i][j] = v_tilda[i][j] - dt*( P_corr[i][j] - P_corr[i-1][j] )/dy ; 
         }
     }
     std::tie( u_n , v_n ) = Update_Boundaries( u_n , v_n );
@@ -205,10 +229,12 @@ void Velocity_L2Norm(){
             err_v += pow( (v_n[i][j] - v_nm1[i][j] ) , 2 )/((nx-1)*(ny-1));      
         }
     }
-    err_u = pow( err_u , 0.5 ) ; err_v = pow( err_v , 0.5 );
+    err_u = pow( err_u , 0.5 ) ; err_v = pow( err_v , 0.5 ); 
 }
 
 
+
+/* ============================================================ OUTPUT ===================================================================================================== */
 void printmatrix( matrix mat ){
     int Rows = mat.size();
     int Cols = mat[0].size();
@@ -221,7 +247,7 @@ void printmatrix( matrix mat ){
 }
 
 void Output_Solution(){
-    ofstream fout("u.txt");
+    ofstream fout("u_32.txt");
     for( int i=0 ; i<ny+2 ; ++i  ){
         for( int j=0 ; j<nx+2 ; ++j){
             fout<<u_n[i][j]<<'\t';
@@ -230,7 +256,7 @@ void Output_Solution(){
     }
     fout.close();
 
-    fout.open("v.txt");
+    fout.open("v_32.txt");
     for( int i=0 ; i<ny+2 ; ++i  ){
         for( int j=0 ; j<nx+2 ; ++j){
             fout<<v_n[i][j]<<'\t';
