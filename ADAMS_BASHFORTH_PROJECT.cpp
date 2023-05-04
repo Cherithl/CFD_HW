@@ -155,11 +155,14 @@ void FV_Momentum(){
 /*========================================================PRESSURE EQUATION SOLVER=================================================================================================== */
 void Pressure_Poisson(){
     /* PRESSURE Initialization */
-    for( int i=1 ; i<ny+1 ; ++i ){
-        for( int j=1 ; j<nx+1 ; ++j ){
-            P_corr[i][j] = 0.0;
+    if( TIME_ITER==1 ){
+        for( int i=1 ; i<ny+1 ; ++i ){
+            for( int j=1 ; j<nx+1 ; ++j ){
+                P_corr[i][j] = 0.0;
+            }
         }
     }
+    
 
     matrix  S( ny+2 , vector<double>( nx+2 , 0.0 ) );
     matrix res( ny+2, vector<double>( nx+2 , 0.0 ) );

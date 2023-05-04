@@ -9,6 +9,7 @@
 
 using namespace std;
 using namespace std::chrono;
+
 typedef vector<vector<double>> matrix;
 
 
@@ -68,6 +69,10 @@ int main(){
     }
     std::tie( u_n , v_n ) = Update_Boundaries( u_n , v_n );
     u_nm1 = u_n ; v_nm1 = v_n;
+
+std::ofstream fout;
+fout.open("err_u_log_32.txt");
+/*........................................................................................................................................................*/
     double vel_tol = 1E-8 ; 
     while( err_u > vel_tol || TIME_ITER < 1 ){
         ++TIME_ITER;
@@ -78,25 +83,34 @@ int main(){
     cout<<" TIME ITER :"<<TIME_ITER<<endl<<'\t';    
     cout<<" err_u : "<<err_u<<endl<<'\t';
     cout<<" err_v : "<<err_u<<endl;
+    
+
+    
+/*--------------------------------- RECORDING EVOLUTION OF ERROR VS TIME----------------------*/
+    auto t2 = high_resolution_clock::now();
+    auto elapsed_time = duration_cast<milliseconds>( t2 - start );
+    fout<<err_u<<'\t'<<elapsed_time.count()<<endl;
+    
     }
+fout.close();
+/*......................................................................................................................................................*/    
     //printmatrix( v_n ); 
     cout<<endl<<endl;
     //printmatrix( u_n );
-    //Output_Solution();
-
-cout<<endl<<endl<<endl;
+    Output_Solution();
+/*--------------------------------CPU TIME  FOR THE WHOLE SIMULATION-----------------*/
     auto stop = high_resolution_clock::now();
             auto duration =duration_cast<milliseconds>(stop -start);
             cout<<'\n'<<"The time taken for convergence is : "<<duration.count() <<" milliseconds \n";
 
-  std::ofstream outfile;
-
-  outfile.open("CPU_time_test.txt", std::ios_base::app); // append instead of overwrite
-  outfile<<endl<<" 32 x 32 "<<'\t'<<dt<<'\t'<<duration.count() ;
+std::ofstream outfile;
+  outfile.open("CPU_time_test_32.txt", std::ios_base::app); // append instead of overwrite
+  outfile<<endl<<" 32 x 32 "<<"\t "<<dt<<'\t'<<duration.count() ;
 
 }
 
 
+/*------==========================UPDATING THE GHOST CELLS======================================-------------*/
 std::tuple<matrix,matrix> Update_Boundaries( matrix u , matrix v ){
     for( int i=1 ; i<ny+1 ; ++i){
         u[i][1]    = 0.0; v[i][0]    = 2*0.0 -  v[i][1]; //0
@@ -110,6 +124,7 @@ std::tuple<matrix,matrix> Update_Boundaries( matrix u , matrix v ){
     return std::tuple(u,v);
 }
 
+/*--------==================================TIME INTEGRATION OF VELOCITIES======================------------------*/
 void FV_Momentum(){
     /* X-MOMENTUM Time Integration */
     for( int i=1 ; i<ny+1 ; ++i ){
@@ -157,11 +172,14 @@ void FV_Momentum(){
 /*========================================================PRESSURE EQUATION SOLVER=================================================================================================== */
 void Pressure_Poisson(){
     /* PRESSURE Initialization */
-    for( int i=1 ; i<ny+1 ; ++i ){
-        for( int j=1 ; j<nx+1 ; ++j ){
-            P_corr[i][j] = 0.0;
-        }
+    if( TIME_ITER==1){
+        for( int i=1 ; i<ny+1 ; ++i ){
+            for( int j=1 ; j<nx+1 ; ++j ){
+                P_corr[i][j] = 0.0;
+            }
+         }
     }
+
 
     matrix  S( ny+2 , vector<double>( nx+2 , 0.0 ) );
     matrix res( ny+2, vector<double>( nx+2 , 0.0 ) );
