@@ -44,7 +44,7 @@ double Re = 100;
 double dt = 1.25E-4;
 
 /* PARAMETERS FOR CONVERGENCE AND REFERENCE */
-int TIME_ITER =0 ; double res_avg = 1.0 ; double w=1.9520932338500549444323581284366638578012850516168826250714063047;
+int TIME_ITER =0 ; double res_avg = 1.0 ; double w= 2.0/(1 + sin( M_PI/( nx + 1 )  ) )  ;
 double err_u = 1 , err_v = err_u;
 
 /*------------------------------------------------------------------------------------------*/

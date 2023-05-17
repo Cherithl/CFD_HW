@@ -6,6 +6,7 @@
 #include <fstream>
 #include <chrono>
 #include <utility>
+#include <algorithm>
 
 using namespace std;
 using namespace std::chrono;
@@ -30,16 +31,16 @@ void printmatrix(matrix);
 
 /*------------------------------------------------------------------------------------------*/
 /*  PARAMETERS  */
-int nx = 32 , ny=nx;
+int nx =128 , ny=nx;
 double lx = 1 , ly=lx ;
 double dx = lx/nx , dy = ly/ny;
 
 /* PHYSICAL PARAMETERS */
-double Re = 100;
-double dt = 5.0E-4;
+double Re = 100 ;
+double dt = 1.25E-4  ;
 
 /* PARAMETERS FOR CONVERGENCE AND REFERENCE */
-int TIME_ITER =0 ; double res_avg = 1.0 ; double w= 1.32  ;
+int TIME_ITER =0 ; double res_avg = 1.0 ; double w= 1.128  ;
 double err_u = 1 , err_v = err_u;
 
 /*------------------------------------------------------------------------------------------*/
@@ -71,7 +72,7 @@ int main(){
     u_nm1 = u_n ; v_nm1 = v_n;
 
 std::ofstream fout;
-fout.open("err_u_log_32.txt");
+fout.open("err_u_log_128_125_E4.txt");
 /*........................................................................................................................................................*/
     double vel_tol = 1E-8 ; 
     while( err_u > vel_tol || TIME_ITER < 1 ){
@@ -87,9 +88,9 @@ fout.open("err_u_log_32.txt");
 
     
 /*--------------------------------- RECORDING EVOLUTION OF ERROR VS TIME----------------------*/
-    auto t2 = high_resolution_clock::now();
-    auto elapsed_time = duration_cast<milliseconds>( t2 - start );
-    fout<<err_u<<'\t'<<elapsed_time.count()<<endl;
+   // auto t2 = high_resolution_clock::now();
+   // auto elapsed_time = duration_cast<milliseconds>( t2 - start );
+    fout<<err_u<<'\t'<<TIME_ITER<<endl;
     
     }
 fout.close();
@@ -104,8 +105,8 @@ fout.close();
             cout<<'\n'<<"The time taken for convergence is : "<<duration.count() <<" milliseconds \n";
 
 std::ofstream outfile;
-  outfile.open("CPU_time_test_32.txt", std::ios_base::app); // append instead of overwrite
-  outfile<<endl<<" 32 x 32 "<<"\t "<<dt<<'\t'<<duration.count() ;
+  outfile.open("CPU_time_test_128.txt", std::ios_base::app); // append instead of overwrite
+  outfile<<endl<<" 128 x 128 "<<"\t "<<dt<<'\t'<<duration.count() ;
 
 }
 
@@ -308,7 +309,7 @@ void printmatrix( matrix mat ){
 }
 
 void Output_Solution(){
-    ofstream fout("u_32.txt");
+    ofstream fout("u_128.txt");
     for( int i=0 ; i<ny+2 ; ++i  ){
         for( int j=0 ; j<nx+2 ; ++j){
             fout<<u_n[i][j]<<'\t';
@@ -317,7 +318,7 @@ void Output_Solution(){
     }
     fout.close();
 
-    fout.open("v_32.txt");
+    fout.open("v_128.txt");
     for( int i=0 ; i<ny+2 ; ++i  ){
         for( int j=0 ; j<nx+2 ; ++j){
             fout<<v_n[i][j]<<'\t';
